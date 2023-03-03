@@ -36,6 +36,7 @@ async def on_message(message):
         return
 
     logger.info(message.content)
+    res = None
     if message.content.startswith('.players'):
         server, *user = message.content.split(' ')[1:]
         if not sanitize(server, *user):
@@ -159,7 +160,8 @@ async def on_message(message):
         res = 'Usage:\n**.players** {Server} {Player name} _Find players with similar name in a server_\n**.player** {Server} {Player name} _Get stats about a player in a server_\n**.clan** {Server} {Clan name} _Get stats about a clan in a server_\n'
 
     logger.info(res)
-    await message.channel.send(res)
+    if res is not None:
+        await message.channel.send(res)
 
 
 threading.Thread(target=keep_alive.run, daemon=True).start()

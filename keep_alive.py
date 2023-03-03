@@ -4,9 +4,9 @@ from waitress import serve
 app = Flask('')
 
 
-@app.route('/ping')
+@app.route('/health')
 def ping():
-    return 'pong'
+    return 'OK'
 
 
 def run():
