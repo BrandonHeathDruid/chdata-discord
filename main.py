@@ -172,7 +172,7 @@ async def on_message(message):
                 res = f'{clan_name} in {server} has {total_members} members'
                 plt.pie(classes_num,
                         labels=classes_text,
-                        autopct='%1.1f%%',
+                        autopct=lambda x: '{:.1f}%\n({:.0f})'.format(x, total_members*x/100),
                         colors=colors)
                 file_name = f'{token_hex(16)}.png'
                 plt.title(res)
