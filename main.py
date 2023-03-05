@@ -6,6 +6,9 @@ import threading
 import keep_alive
 import logging
 
+import matplotlib.pyplot as plt
+from secrets import token_hex
+
 logging.basicConfig(format='%(levelname)s %(asctime)s - %(message)s',
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -16,6 +19,13 @@ db = pymongo.MongoClient(os.getenv("URL_MONGODB"),
 
 TAB_PLAYERS_HED = 'Name, Class, Level, Clan'
 LIMIT_PLAYERS = 10
+CLASS_COLORS = {
+    'Rogue': '#caa8ff',
+    'Ranger': '#f9c857',
+    'Warrior': '#ff3434',
+    'Mage': '#53a9e9',
+    'Druid': '#76ae58'
+}
 
 
 @client.event
@@ -37,6 +47,7 @@ async def on_message(message):
 
     logger.info(message.content)
     res = None
+    file_name = None
     if message.content.startswith('.players'):
         server, *user = message.content.split(' ')[1:]
         if not sanitize(server, *user):
@@ -146,22 +157,38 @@ async def on_message(message):
             }])
 
             total_members = 0
-            res = f'{clan_name} in {server} has:\n'
+            classes_text = []
+            classes_num = []
+            colors = []
             for clazz in clan_data:
-                num = clazz["num"]
-                total_members += num
-                res += f'{clazz["_id"]}: {num}\n'
+                classes_text.append(clazz["_id"])
+                classes_num.append(clazz["num"])
+                colors.append(CLASS_COLORS[clazz["_id"]])
+                total_members += clazz["num"]
 
             if total_members == 0:
                 res = 'Not found'
             else:
-                res += f'Total members: {total_members}'
+                res = f'{clan_name} in {server} has {total_members} members'
+                plt.pie(classes_num,
+                        labels=classes_text,
+                        autopct='%1.1f%%',
+                        colors=colors)
+                file_name = f'{token_hex(16)}.png'
+                plt.title(res)
+                plt.savefig(file_name)
+                plt.close()
+
     elif message.content.startswith('.help'):
         res = 'Usage:\n**.players** {Server} {Player name} _Find players with similar name in a server_\n**.player** {Server} {Player name} _Get stats about a player in a server_\n**.clan** {Server} {Clan name} _Get stats about a clan in a server_\n'
 
     logger.info(res)
     if res is not None:
-        await message.channel.send(res)
+        if file_name is not None:
+            await message.channel.send(file=discord.File(file_name))
+            os.remove(file_name)
+        else:
+            await message.channel.send(res)
 
 
 threading.Thread(target=keep_alive.run, daemon=True).start()
