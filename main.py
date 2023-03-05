@@ -170,13 +170,16 @@ async def on_message(message):
                 res = 'Not found'
             else:
                 res = f'{clan_name} in {server} has {total_members} members'
-                plt.pie(classes_num,
+                
+                fig, ax = plt.subplots()
+                ax.pie(classes_num,
                         labels=classes_text,
                         autopct=lambda x: '{:.1f}%\n({:.0f})'.format(x, total_members*x/100),
                         colors=colors)
-                file_name = f'{token_hex(16)}.png'
-                plt.title(res)
-                plt.savefig(file_name)
+                file_name = f'.{token_hex(16)}.png'
+                ax.set_title(res)
+                fig.savefig(file_name)
+                fig.clf()
                 plt.close()
 
     elif message.content.startswith('.help'):
