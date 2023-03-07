@@ -18,7 +18,7 @@ db = pymongo.MongoClient(os.getenv("URL_MONGODB"),
                          tlsCAFile=certifi.where())[os.getenv('DB_NAME')]
 
 TAB_PLAYERS_HED = 'Name, Class, Level, Clan'
-LIMIT_PLAYERS = 10
+LIMIT_PLAYERS = 25
 CLASS_COLORS = {
     'Rogue': '#caa8ff',
     'Ranger': '#f9c857',
@@ -100,12 +100,17 @@ async def on_message(message):
             res = "No special symbols allowed"
         else:
             user_name = ' '.join(user)
-            user_data = db.user.find_one({'id': f'{user_name}@{server}'}, {
-                '_id': 0,
-                'clan': 1,
-                'class': 1,
-                'level': 1,
-            })
+            user_data = db.user.find_one(
+                {'id': {
+                    '$regex': f'{user_name}@{server}',
+                    '$options': 'si'
+                }}, {
+                    '_id': 0,
+                    'name': 1,
+                    'clan': 1,
+                    'class': 1,
+                    'level': 1
+                })
             if user_data == None:
                 res = "Not found"
             else:
@@ -118,7 +123,7 @@ async def on_message(message):
                     for l in user_data['level']
                 ])
 
-                res = f'Name: {user_name}\nServer: {server}\nClan: {user_data["clan"]}\nClass: {user_data["class"]}\nLevel: {user_data["level"]}\n'
+                res = f'Name: {user_data["name"]}\nServer: {server.title()}\nClan: {user_data["clan"]}\nClass: {user_data["class"]}\nLevel: {user_data["level"]}\n'
 
     elif message.content.startswith('.clan'):
         server, *clan = message.content.split(' ')[1:]
@@ -135,7 +140,10 @@ async def on_message(message):
                 }
             }, {
                 '$match': {
-                    'server': server
+                    'server': {
+                        '$regex': server,
+                        '$options': 'si'
+                    }
                 }
             }, {
                 '$addFields': {
@@ -145,13 +153,19 @@ async def on_message(message):
                 }
             }, {
                 '$match': {
-                    'last_clan': clan_name
+                    'last_clan': {
+                        '$regex': clan_name,
+                        '$options': 'si'
+                    }
                 }
             }, {
                 '$group': {
                     '_id': '$class',
                     'num': {
                         '$sum': 1
+                    },
+                    clan_name: {
+                        '$first': '$last_clan'
                     }
                 }
             }])
@@ -165,17 +179,19 @@ async def on_message(message):
                 classes_num.append(clazz["num"])
                 colors.append(CLASS_COLORS[clazz["_id"]])
                 total_members += clazz["num"]
+                real_clan_name = clazz[clan_name]
 
             if total_members == 0:
                 res = 'Not found'
             else:
-                res = f'{clan_name} in {server} has {total_members} members'
-                
+                res = f'{real_clan_name} in {server.title()} has {total_members} members'
+
                 fig, ax = plt.subplots()
                 ax.pie(classes_num,
-                        labels=classes_text,
-                        autopct=lambda x: '{:.1f}%\n({:.0f})'.format(x, total_members*x/100),
-                        colors=colors)
+                       labels=classes_text,
+                       autopct=lambda x: '{:.1f}%\n({:.0f})'.format(
+                           x, total_members * x / 100),
+                       colors=colors)
                 file_name = f'.{token_hex(16)}.png'
                 ax.set_title(res)
                 fig.savefig(file_name)
