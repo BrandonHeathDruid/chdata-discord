@@ -13,6 +13,7 @@ logging.basicConfig(format='%(levelname)s %(asctime)s - %(message)s',
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+PREFIX = '.'
 client = discord.Client(intents=discord.Intents.all())
 db = pymongo.MongoClient(os.getenv("URL_MONGODB"),
                          tlsCAFile=certifi.where())[os.getenv('DB_NAME')]
@@ -42,7 +43,7 @@ def sanitize(*list_str):
 
 @client.event
 async def on_message(message):
-    if message.author == client.user:
+    if message.author.bot or not message.content.startswith(PREFIX) or message.guild is None:
         return
 
     logger.info(message.content)
